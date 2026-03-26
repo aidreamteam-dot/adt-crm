@@ -1,0 +1,209 @@
+
+var ADT_LOGO  = 'https://assets.cdn.filesafe.space/60HdM478UtbrWHBfXZln/media/69c56285e24981ec5213004e.png';
+var ADT_BRAND = 'AI Dream Team';
+
+var ADT_HIDDEN = [
+  'automations','ai agents','marketing','memberships',
+  'custom fields','custom values','manage scoring',
+  'external tracking','tags','labs','audit logs',
+  'brand boards','objects'
+];
+
+// ── SHIMMER KEYFRAME ──────────────────────────────────────────
+function adtStyles() {
+  if (document.getElementById('adt-kf')) return;
+  var s = document.createElement('style');
+  s.id = 'adt-kf';
+  s.textContent = '@keyframes adtShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}';
+  document.head.appendChild(s);
+}
+
+// ── BRANDED HEADER ────────────────────────────────────────────
+function adtHeader() {
+  if (document.getElementById('adt-header')) return;
+  var el = document.createElement('div');
+  el.id = 'adt-header';
+  el.style.cssText = 'display:flex;align-items:center;gap:12px;background:#1a3a4a;padding:9px 22px;position:sticky;top:0;z-index:99999;border-bottom:2px solid #9BBDD0;';
+  el.innerHTML =
+    '<img src="'+ADT_LOGO+'" style="height:34px;width:auto;object-fit:contain;"/>' +
+    '<span style="font-family:sans-serif;font-size:15px;font-weight:600;color:#9BBDD0;letter-spacing:0.03em;">'+ADT_BRAND+'</span>' +
+    '<span style="font-size:11px;color:rgba(155,189,208,0.5);margin-left:2px;">Your AI-Powered Growth Engine</span>';
+  document.body.insertBefore(el, document.body.firstChild);
+}
+
+// ── DASHBOARD DETECTION ───────────────────────────────────────
+function adtIsDash() {
+  var p = window.location.pathname;
+  return p.indexOf('/dashboard') !== -1 ||
+         p.indexOf('/launchpad') !== -1 ||
+         p.match(/^\/[a-zA-Z0-9_-]+\/?$/);
+}
+
+// ── SCRAPE REAL GHL WIDGET DATA ───────────────────────────────
+function adtScrape(keywords) {
+  // Try GHL dashboard stat cards first
+  var cards = document.querySelectorAll(
+    '[class*="widget-card"], [class*="stat-card"], [class*="dashboard-card"], '+
+    '[class*="report-card"], [class*="overview-card"], [class*="summary-card"], '+
+    '[class*="metric"], [class*="kpi"]'
+  );
+  for (var i = 0; i < cards.length; i++) {
+    var txt = cards[i].textContent.toLowerCase();
+    for (var k = 0; k < keywords.length; k++) {
+      if (txt.indexOf(keywords[k]) !== -1) {
+        var num = cards[i].textContent.match(/[\d,]+/);
+        if (num) return num[0].replace(/,/g,'');
+      }
+    }
+  }
+  // Fallback: scan all visible number elements near keyword text
+  var all = document.querySelectorAll('h1,h2,h3,h4,p,span,div');
+  for (var j = 0; j < all.length; j++) {
+    var t = all[j].textContent.trim().toLowerCase();
+    for (var m = 0; m < keywords.length; m++) {
+      if (t.indexOf(keywords[m]) !== -1) {
+        var sibling = all[j].nextElementSibling;
+        if (sibling) {
+          var n = sibling.textContent.match(/[\d,]+/);
+          if (n) return n[0].replace(/,/g,'');
+        }
+        var parent = all[j].parentElement;
+        if (parent) {
+          var pn = parent.textContent.match(/\d{1,6}/);
+          if (pn && parseInt(pn[0]) > 0) return pn[0];
+        }
+      }
+    }
+  }
+  return null;
+}
+
+// ── SCRAPE OFFER ACCEPTED from Ryan pipeline stage ────────────
+function adtOfferAccepted() {
+  var cols = document.querySelectorAll('[class*="pipeline-stage"], [class*="stage-column"], [class*="kanban-col"]');
+  for (var i = 0; i < cols.length; i++) {
+    var title = cols[i].textContent.toLowerCase();
+    if (title.indexOf('offer accepted') !== -1) {
+      var cards = cols[i].querySelectorAll('[class*="opportunity"], [class*="deal-card"], [class*="card"]');
+      return cards.length > 0 ? String(cards.length) : null;
+    }
+  }
+  // Fallback: look for text "Offer Accepted" anywhere and grab nearby number
+  var els = document.querySelectorAll('*');
+  for (var j = 0; j < els.length; j++) {
+    if (els[j].children.length === 0 && els[j].textContent.trim().toLowerCase() === 'offer accepted') {
+      var p = els[j].closest('[class*="stage"], [class*="column"], [class*="col"]');
+      if (p) {
+        var n = p.querySelectorAll('[class*="card"], [class*="item"], [class*="opportunity"]');
+        if (n.length) return String(n.length);
+      }
+    }
+  }
+  return null;
+}
+
+// ── STAT BOX HTML ─────────────────────────────────────────────
+function adtBox(id, val, label) {
+  return '<div style="background:rgba(155,189,208,0.1);border:1px solid rgba(155,189,208,0.2);border-radius:10px;padding:10px 18px;text-align:center;min-width:82px;">' +
+    '<div id="'+id+'" style="font-size:22px;font-weight:600;color:#9BBDD0;line-height:1;">'+(val||'–')+'</div>' +
+    '<div style="font-size:9px;color:rgba(155,189,208,0.55);text-transform:uppercase;letter-spacing:0.07em;margin-top:4px;">'+label+'</div>' +
+  '</div>';
+}
+
+// ── BANNER ────────────────────────────────────────────────────
+function adtBanner() {
+  if (!adtIsDash()) {
+    var old = document.getElementById('adt-banner');
+    if (old) old.remove();
+    return;
+  }
+  if (document.getElementById('adt-banner')) return;
+
+  var contacts = adtScrape(['contact','lead','total contact']);
+  var appts    = adtScrape(['appointment','booking','booked','scheduled']);
+  var offers   = adtOfferAccepted();
+
+  var el = document.createElement('div');
+  el.id = 'adt-banner';
+  el.style.cssText = 'background:#1a3a4a;border-bottom:1px solid rgba(155,189,208,0.2);position:relative;z-index:9998;';
+  el.innerHTML =
+    '<div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;gap:16px;flex-wrap:wrap;">' +
+      '<div>' +
+        '<div style="font-family:sans-serif;font-size:18px;font-weight:600;color:#e8f4fa;margin-bottom:3px;">Welcome back 👋</div>' +
+        '<div style="font-size:12px;color:rgba(155,189,208,0.65);">Here\'s your business snapshot for today.</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;">' +
+        adtBox('adt-contacts', contacts, 'Total Contacts') +
+        adtBox('adt-appts',    appts,    'Appointments')   +
+        adtBox('adt-offers',   offers,   'Offers Accepted') +
+      '</div>' +
+    '</div>' +
+    '<div style="height:3px;background:linear-gradient(90deg,transparent,#9BBDD0,#5aa0c0,#9BBDD0,transparent);background-size:200%;animation:adtShimmer 3s linear infinite;"></div>';
+
+  var nav = document.querySelector('.main-header, header, #app-header, [class*="topbar"], [class*="top-bar"]');
+  if (nav && nav.parentNode) {
+    nav.parentNode.insertBefore(el, nav.nextSibling);
+  } else {
+    document.body.insertBefore(el, document.body.children[1] || null);
+  }
+
+  // Re-scrape after 1.5s and 4s to catch lazy-loaded widgets
+  [1500, 4000].forEach(function(delay) {
+    setTimeout(function() {
+      var c = adtScrape(['contact','lead','total contact']);
+      var a = adtScrape(['appointment','booking','booked','scheduled']);
+      var o = adtOfferAccepted();
+      var ec = document.getElementById('adt-contacts');
+      var ea = document.getElementById('adt-appts');
+      var eo = document.getElementById('adt-offers');
+      if (ec && c) ec.textContent = c;
+      if (ea && a) ea.textContent = a;
+      if (eo && o) eo.textContent = o;
+    }, delay);
+  });
+}
+
+// ── HIDE NAV ITEMS ────────────────────────────────────────────
+function adtHideNav() {
+  var els = document.querySelectorAll(
+    'nav a,nav li,nav li a,[class*="nav-item"],[class*="sidebar"] a,' +
+    '[class*="sidebar"] li,[class*="menu-item"],[class*="sidebar-item"]'
+  );
+  els.forEach(function(el) {
+    var text = el.textContent.trim().toLowerCase();
+    ADT_HIDDEN.forEach(function(kw) {
+      if (text === kw || text.indexOf(kw) === 0) {
+        el.style.setProperty('display','none','important');
+        el.setAttribute('data-adt-hidden','true');
+        if (el.parentElement && el.parentElement.tagName === 'LI') {
+          el.parentElement.style.setProperty('display','none','important');
+        }
+      }
+    });
+  });
+}
+
+// ── ROUTE WATCHER ─────────────────────────────────────────────
+var adtLastUrl = location.href;
+new MutationObserver(function() {
+  adtHideNav();
+  if (location.href !== adtLastUrl) {
+    adtLastUrl = location.href;
+    setTimeout(function() {
+      var old = document.getElementById('adt-banner');
+      if (old) old.remove();
+      adtBanner();
+    }, 500);
+  }
+}).observe(document.body, { childList: true, subtree: true });
+
+// ── INIT ──────────────────────────────────────────────────────
+function adtInit() {
+  adtStyles();
+  adtHeader();
+  adtBanner();
+  adtHideNav();
+}
+
+if (document.readyState !== 'loading') { adtInit(); }
+else { document.addEventListener('DOMContentLoaded', adtInit); }
